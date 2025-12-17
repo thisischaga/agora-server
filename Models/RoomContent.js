@@ -3,28 +3,14 @@ const mongoose = require ('mongoose');
 
 const userSchema = new mongoose.Schema({
 
-    roomName: {
-        type: String,
-        require: true,
-    },
-    roomPP: {
-        type: String,
-        require: true,
-    },
     roomId:{
         type: String,
         require: true,
     },
-    
-    authorId:{
-        type: String,
-        require: true,
-    },
-    authorName: {
-        type: String,
-    },
-    authorPP: {
-        type: String,
+    sender: {
+        userId: { type: String, required: true },
+        username: { type: String, required: true },
+        userPP: { type: String, required: false }
     },
     content: {
         type: String,
@@ -39,3 +25,4 @@ const userSchema = new mongoose.Schema({
 
 
 module.exports = mongoose.model('RoomContent', userSchema);
+

@@ -9,10 +9,11 @@ const verifyToken = require ('./Middlewares/verifyTokens');
 const Post = require ('./Models/Post');
 const multer = require ('multer');
 const http = require ('http');
-const {Server} = require ('socket.io');
+
 const axios = require('axios');
 const RoomContent = require ('./Models/RoomContent');
 const Room = require ('./Models/Room');
+const { initSocket } = require('./socket');
 //const bodyParser = require ('body-parser')
 //const authRoutes = require ('./routes/authRoutes');
 
@@ -25,39 +26,12 @@ app.use(cors({
     credentials: true
 }))
 const server = http.createServer(app);
+initSocket(server);
 const port = 8000;
 
-const io = new Server(server, {
-    cors: {
-        origin: 'http://localhost:3000',
-        methods: ['GET', 'POST'],
-        credentials: true,
-    }
-});
+
 app.use(express.json({limit: '20mb'}));
 
-
-const connectedUsers = new Map();
-io.on('connection', (socket)=>{
-    
-    const userId = socket.handshake.query.t
-    connectedUsers.set(socket.id, userId)
-    console.log('Utilisateur conneté...', socket.id);
-    console.log("Nombre d'utilisateurs connectés :", connectedUsers.size);
-         
-
-    socket.on('disconnect', async()=>{
-        try {
-            await axios.post('http://localhost:8000/socket/disconnect/getSocketId', {socketId: socket.id}, {
-            })
-            console.log("Un utilisateur s'est deconnecté", socket.id);
-        } catch (error) {
-            console.log('Erreur', error);
-        };  
-        connectedUsers.delete(socket.id);
-        console.log("Nombre d'utilisateurs connectés :", connectedUsers.size);
-    })
-})
 
 //ROUTE POUR L'INSCRIPTION
 app.post('/signup', async (req, res) => {
@@ -134,6 +108,48 @@ app.post('/login', async (req,res) =>{
         console.log('Erreur', error)
     }
 
+});
+
+// Gestion du socketId
+app.post("/socket/getSocketId", verifyToken, async (req, res) => {
+    const { socketId } = req.body;
+    const userId = req.user.userId;
+
+    if (!userId || !socketId) {
+        return res.status(400).json({ message: "userId ou socketId manquant" });
+    }
+
+    try {
+        await User.findByIdAndUpdate(
+          userId,
+          { socketId: socketId },
+        );
+
+        res.json({ message: "socketId enregistré 🎉" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Nettoyer le socletId à la déconnexion
+app.post("/socket/disconnect/getSocketId", async (req, res) => {
+  const { socketId } = req.body;
+
+  if (!socketId) {
+    return res.status(400).json({ message: "socketId manquant" });
+  }
+
+  try {
+    await User.updateOne(
+        { socketId: socketId },
+        { $set: { socketId: null } }
+    );
+
+
+    res.json({ message: "socketId supprimé" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 //Route pour gérer la suivie des utilisateurs
 app.put('/follow',verifyToken, async (req, res) =>{
@@ -649,7 +665,7 @@ app.post('/room/create', verifyToken, async (req, res) => {
     try {
         const { name, roomPP, bio, members } = req.body;
         const authorId = req.user.userId;
-        console.log(members)
+
         const author = await User.findById(authorId);
 
         if (!author) {
@@ -686,50 +702,82 @@ app.post('/room/create', verifyToken, async (req, res) => {
 
 
 // ➜ POST /api/room-content/create
-app.post("/rooms/post", verifyToken, async (req, res) => {
+app.post("/room/post", verifyToken, async (req, res) => {
 
     try {
-        const {
-            roomName,
-            roomPP,
-            roomId,
-            authorName,
-            authorPP,
-            content,
-        } = req.body;
-
-        const authorId = req.user.userId;
-
-        const user = User.findById(authorId);
+        const {userId, content, roomId} = req.body;
+        const createdAt = new Date();
+        const user = await User.findById(userId);
 
         if (!user) {
              return res.status(400).json({ message: "Utilisateur introuvable" });
         }
 
-        if (!roomName || !roomPP || !roomId || !authorId || !content) {
+        if (!roomId ||!content) {
             return res.status(400).json({ message: "Champs manquants" });
         }
-
         const newContent = new RoomContent({
-            roomName,
-            roomPP,
             roomId,
-            authorId,
-            authorName,
-            authorPP,
             content,
-            createdAt: new Date().toISOString(),
+            sender: {
+                userId: userId,
+                username: user.username,
+                userPP: user.userPP
+            },
+            createdAt,
         });
 
         await newContent.save();
-        res.status(201).json({ message: "Publication ajoutée", data: newContent });
+        res.status(201).json({ message: "Publication ajoutée", newMessage: newContent });
 
     } catch (error) {
         console.error("Erreur création contenu de forum:", error);
         res.status(500).json({ message: "Erreur serveur" });
     }
 });
+// Ajoute une Membre dans un Room
 
+app.put("/room/join", verifyToken, async(req, res)=>{
+    const {roomId, userId} = req.body;
+
+    const room = await Room.findById(roomId);
+    const user = await User.findById(userId);
+    if (!room) {
+        return res.status(400).json({message: "Cette salle est introuvable"})
+    }
+    if (!user) {
+        return res.status(400).json({message: "Utilisateur introuvable"})
+    }
+
+
+    if (room.members.includes(userId)) {
+        room.members.pull(userId);
+    }else{
+        room.members.push(userId);
+    }
+    
+    room.save();
+    res.json({message: `Vous avez rejoin ${room.name}`})
+})
+// Route pour afficher un seul salon 
+app.get('/room/:id', verifyToken, async(req,res) =>{
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(400).json({message: 'connectez-vous'});
+    }
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) {
+            return res.status(404).json({message: 'Forum non trouvé'});
+        }
+        res.json(room);
+    } catch (error) {
+        res.status(500).json({ message: "Erreur interne du serveur" });
+        console.log('Erreur:', error);
+    }
+})
 
 server.listen(port, ()=>{
     console.log('Serveur lancé sur le port ', port);
