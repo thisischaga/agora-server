@@ -7,9 +7,9 @@ const connectedUsers = new Map();
 const initSocket = (server)=>{
     io = new Server(server, {
         cors: {
-            origin: 'http://localhost:3000',
-            methods: ['GET', 'POST'],
+            origin: true,
             credentials: true,
+            methods: ['GET', 'POST'],
         }
     });
 
@@ -47,6 +47,22 @@ const initSocket = (server)=>{
                 console.log('Erreur', error);
             }; 
     
+        });
+        socket.on('notif', async(data)=>{
+            console.log(data)
+            try {
+                const response = await axios.post('http://localhost:8000/notif/create',
+                    {
+                        userId: data.userId,
+                        to: data.authorId,
+                        message: data.message,
+                        post: data.post,
+                        type: data.type
+                    }, {headers: {Authorization: `Bearer${data.token}`}}
+                )
+            } catch (error) {
+                console.log('Erreur', error);
+            };
         });
     
         socket.on('disconnect', async()=>{

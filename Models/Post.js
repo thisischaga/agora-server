@@ -62,7 +62,15 @@ const userSchema = new mongoose.Schema({
     sharing:{
         type: [String],
         require: true,
-    },                                                                                                                                                                                                                                                                                                                                 
+    },  
+    legend:{
+        type: String,
+        require: false,
+    },  
+    favoris: {
+        type: [],
+        require: true,
+    },                                                                                                                                                                                                                                                                                                                           
 
 })
 

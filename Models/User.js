@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
     },
     userPP: {
         type: String,
-        required: true,
+        required: false,
     },
     userBirthday: {
         type: String,
@@ -44,10 +44,6 @@ const userSchema = new mongoose.Schema({
         require: true,
     },
     messages: {
-        type: [],
-        require: true,
-    },
-    favoris: {
         type: [],
         require: true,
     },
