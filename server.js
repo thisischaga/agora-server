@@ -21,7 +21,15 @@ require('dotenv').config();
 connectDB();
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://agora-git-main-chagas-projects-6a32918b.vercel.app",
+    "https://agora-k5t35misq-chagas-projects-6a32918b.vercel.app"
+  ],
+  credentials: true
+}));
 
 const server = http.createServer(app);
 initSocket(server);
