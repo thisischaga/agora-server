@@ -25,7 +25,8 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://agora-front.netlify.app"
+    "https://agora-front.netlify.app",
+    "https://agora-seven-gold.vercel.app"
   ],
   credentials: true
 }));
