@@ -14,39 +14,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         require: false,
     },
-    followers: {
-        type: [String],
+    post:{
+        type: {},
         require: true,
-    },
-    post: {
-        type: String,
-        require: true,
-    },
-    postText: {
-        type: String,
-        require: false,
-    },
-    postPicture: {
-        type: String,
-        require: false,
-    },
-    title: {
-        type: String,
-        require: false,
     },
     createdAt:{
         type: String,
         require: true,
     },
-    
-    statut:{
-        type: String,
-        require: true,
-    },
-    titleImg:{
-        type: String,
-        require: true,
-    },
+
     postLike:{
         type: [String],
         require: true,
@@ -63,10 +39,7 @@ const userSchema = new mongoose.Schema({
         type: [String],
         require: true,
     },  
-    legend:{
-        type: String,
-        require: false,
-    },  
+ 
     favoris: {
         type: [],
         require: true,

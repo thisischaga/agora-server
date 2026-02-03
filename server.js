@@ -478,31 +478,22 @@ app.get('/user_data', verifyToken, async (req, res) => {
 
 app.post('/publication', verifyToken, async (req, res) => {
     const userId = req.user.userId;
-    const { post, postPicture, title, postText, type, legend } = req.body;
+    const { post } = req.body;
+
+    console.log(post)
     let favoris = [];
 
     const createdAt = new Date().toISOString();
 
-    if (type === 'text') {
-        if (!postText) {
-            return res.status(400).json({ message: "Champs manquants ou invalides" });
-        }
-    }
-    if (type === 'image') {
-        if (!postPicture) {
-            return res.status(400).json({ message: "Champs manquants ou invalides" });
-        }
-    }
 
     try {
         const user = await User.findById(req.user.userId);
         if (!user) {
             return res.status(401).json({ message: "Utilisateur non trouvé" });
         }
-        const { username, userPP, followers } = user;
-        const authorFollowers = user.followers;
+        const { username, userPP } = user;
         const newPost = new Post({
-            username, userPP, legend, post, postText, postPicture, title, userId, createdAt, favoris
+            username, userPP, post, userId, createdAt, favoris
         });
         await newPost.save();
 
@@ -939,6 +930,7 @@ app.put("/message/read", verifyToken, async (req, res) => {
     }
 
     await message.save();
+    console.log(message)
 
 })
 
@@ -1023,6 +1015,7 @@ app.get("/conversations_list", verifyToken, async (req, res) => {
                         socketId: "$userData.socketId"
                     },
                     lastMessage: {
+                        id: "$lastMessage._id",
                         text: "$lastMessage.message",
                         createdAt: "$lastMessage.createdAt",
                         unread: {
@@ -1043,7 +1036,6 @@ app.get("/conversations_list", verifyToken, async (req, res) => {
         ]);
 
         res.status(200).json(conversations);
-        console.log(conversations)
 
     } catch (error) {
         console.error("❌ conversations_list error:", error);

@@ -17,6 +17,10 @@ const initSocket = (server)=>{
         
         const userId = socket.handshake.query.t
         connectedUsers.set(socket.id, userId)
+
+        const authUserId = socket.handshake.auth.userId;
+        socket.join(authUserId);
+
         console.log('Utilisateur conneté...', socket.id);
         console.log("Nombre d'utilisateurs connetés...',", connectedUsers.size);
     
@@ -30,22 +34,42 @@ const initSocket = (server)=>{
                 socket.broadcast.emit("quitRoom", message= `${data} a quitté le chat`);
             }
         })
+
+        socket.on('newMsgAlert', (data)=>{
+            console.log(data)
+            socket.emit('newMess', data)
+            
+        })
     
         socket.on('sendMessage', async(data)=>{
+            const participants = data.backendData.participants;
+            const receiverId = data.backendData.receiverId;
+            const text = data.backendData.text;
 
-            try {
-                const response = await axios.post('http://localhost:8000/room/post', {
-                        userId: data.userId,
-                        content: data.content,
-                        roomId: data.roomId}, 
-                        {headers: {Authorization: `Bearer${data.token}`}
-            })
-                
-            socket.emit('newMessage', response.data.newMessage);
-            socket.broadcast.emit("newMessageAll", response.data.newMessage);
+            const backendURL = data.metaData.backendURL;
+            const token = data.metaData.token;
+
+            const optimisticMsg = data.optimisticMsg;
+
+            console.log(data)
+
+            socket.emit('newMessage', optimisticMsg)
+
+            /**try {
+
+                const response = await axios.post(`${backendURL}/messages/send`, {
+                    participants: [currentUser.userId, receiver._id],
+                    receiverId: receiver._id,
+                    text: content
+                }, {
+                    headers: { Authorization: `Bearer${token}` }
+                });
+                setMessages(prev => prev.map(m => m._id === optimisticId ? response.data : m));
             } catch (error) {
-                console.log('Erreur', error);
-            }; 
+                setMessages(prev => prev.filter(m => m._id !== optimisticId));
+                setMessageText(content);
+                Alert.alert("Erreur", "L'envoi a échoué.", error);
+            } */
     
         });
         socket.on('notif', async(data)=>{
