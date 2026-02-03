@@ -39,68 +39,83 @@ app.use(express.json({ limit: '20mb' }));
 
 app.post('/signup', async (req, res) => {
     const { username, userPassword, userEmail, userPP, userBirthday } = req.body;
-
-    console.log({ username, userPassword, userEmail, userPP, userBirthday })
     const createdAt = new Date();
 
-    let messages = [];
-    let amis = [];
-    let socketId = null;
-
     const emailRegex = /[^\s@]+[^\s@]+\.[^\s@]+$/;
-    const mdpValide = userPassword.length >= 6;
-
     const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{3,14}$/;
+    const mdpValide = userPassword && userPassword.length >= 6;
 
     try {
+        // 1. Vérification des champs obligatoires
         if (!username || !userPassword || !userEmail || !userBirthday) {
-            return res.status(404).json({ message: "Champ manquant " })
+            return res.status(400).json({ message: "Champs manquants" });
         }
-        const existingUser = await User.findOne({ userEmail });
 
+        // 2. LOGIQUE DE VÉRIFICATION D'ÂGE (Intégration)
+        const today = new Date();
+        const birthDate = new Date(userBirthday);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        
+        // Ajustement si l'anniversaire n'est pas encore passé cette année
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 15) {
+            return res.status(400).json({ 
+                message: "Vous devez avoir au moins 15 ans pour vous inscrire." 
+            });
+        }
+
+        // 3. Validation du format de l'Email
         if (!emailRegex.test(userEmail)) {
-            return res.status(400).json(
-                { message: "Email invalide" }
-            );
+            return res.status(400).json({ message: "Email invalide" });
         }
 
+        // 4. Vérification si l'utilisateur existe déjà
+        const existingUser = await User.findOne({ userEmail });
         if (existingUser) {
-            return res.status(400).json(
-                { message: "L'email est déjà utilisé " }
-            );
+            return res.status(400).json({ message: "L'email est déjà utilisé" });
         }
 
+        // 5. Validation du mot de passe
         if (!mdpValide) {
-            return res.status(400).json(
-                { message: "Mot de passe trop court (minimum 6 caractères) " }
-            );
+            return res.status(400).json({ message: "Mot de passe trop court (6 caractères min)" });
         }
 
+        // 6. Validation du format du pseudo
         if (!usernameRegex.test(username)) {
-            return res.status(400).json(
-                { message: "Le nom d'utilisateur est déjà utilisé " }
-            );
+            return res.status(400).json({ message: "Format du nom d'utilisateur invalide" });
         }
 
+        // 7. Hashage et création de l'utilisateur
         const hashedPassword = await bcrypt.hash(userPassword, 10);
-
         const newUser = new User({
-            username, userPassword: hashedPassword, userBirthday,
-            userEmail, userPP, socketId, messages, amis, createdAt
+            username,
+            userPassword: hashedPassword,
+            userBirthday,
+            userEmail,
+            userPP,
+            socketId: null,
+            messages: [],
+            amis: [],
+            createdAt
         });
+
         await newUser.save();
 
-
+        // 8. Génération du Token
         const token = jwt.sign(
             { userId: newUser._id },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
+        );
 
-        )
-        res.status(201).json({ message: 'Vous avez créer un profil', token });
+        res.status(201).json({ message: 'Profil créé avec succès', token });
 
     } catch (error) {
-        console.log('Erreur du serveur', error)
+        console.error('Erreur du serveur:', error);
         res.status(500).json({ message: 'Erreur interne du serveur' });
     }
 });
@@ -930,7 +945,7 @@ app.put("/message/read", verifyToken, async (req, res) => {
     }
 
     await message.save();
-    console.log(message)
+    console.log(mess)
 
 })
 
