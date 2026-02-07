@@ -16,6 +16,8 @@ const { initSocket } = require('./socket');
 const cryptoJS = require('crypto-js');
 const Notifications = require('./Models/Notifications');
 const Message = require('./Models/Message');
+const compression = require('compression');
+const { default: rateLimit } = require('express-rate-limit');
 
 require('dotenv').config();
 connectDB();
@@ -36,6 +38,12 @@ initSocket(server);
 const port = 8000;
 
 app.use(express.json({ limit: '20mb' }));
+app.use(compression());
+
+app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100
+}));
 
 app.post('/signup', async (req, res) => {
     const { username, userPassword, userEmail, userPP, userBirthday } = req.body;
@@ -343,7 +351,10 @@ app.get('/all-users', verifyToken, async (req, res) => {
 
     const userId = req.user.userId
     try {
-        const users = await User.find({_id: {$ne: userId}}).sort({ createdAt: -1 });
+        const users = await User.find({_id: {$ne: userId}})
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean();
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: "Erreur interne du serveur" });
@@ -648,7 +659,10 @@ app.put('/post/favoris', verifyToken, async (req, res) => {
 
 app.get('/posts', verifyToken, async (req, res) => {
     try {
-        const posts = await Post.find().sort({ createdAt: -1 });
+        const posts = await Post.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .lean();
         res.json(posts);
     } catch (error) {
         res.status(500).json({ message: "Erreur interne du serveur" });
