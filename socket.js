@@ -42,35 +42,44 @@ const initSocket = (server)=>{
         })
     
         socket.on('sendMessage', async(data)=>{
+            console.log(data);
             const participants = data.backendData.participants;
             const receiverId = data.backendData.receiverId;
             const text = data.backendData.text;
 
-            const backendURL = data.metaData.backendURL;
+            const backendURL = data.metaData.backendUrl;
             const token = data.metaData.token;
 
-            const optimisticMsg = data.optimisticMsg;
+            //const optimisticMsg = data.optimisticMsg;
 
-            console.log(data)
 
-            socket.emit('newMessage', optimisticMsg)
-
-            /**try {
+            try {
 
                 const response = await axios.post(`${backendURL}/messages/send`, {
-                    participants: [currentUser.userId, receiver._id],
-                    receiverId: receiver._id,
-                    text: content
+                    participants: participants,
+                    receiverId: receiverId,
+                    text: text
                 }, {
                     headers: { Authorization: `Bearer${token}` }
                 });
-                setMessages(prev => prev.map(m => m._id === optimisticId ? response.data : m));
+                const optimisticMsg = response.data;
+
+                io.to(receiverId).emit('newMsg', optimisticMsg)
             } catch (error) {
-                setMessages(prev => prev.filter(m => m._id !== optimisticId));
-                setMessageText(content);
-                Alert.alert("Erreur", "L'envoi a échoué.", error);
-            } */
+                console.log("Erreur", "L'envoi a échoué.", error);
+            }
     
+        });
+        socket.on('message:read', async(data)=>{
+            try {
+                await axios.put(`${data.API_URL}/messages/read`, {
+                    ortherId: data.ortherId
+                }, {
+                    headers: { Authorization: `Bearer${data.token}` }
+                });
+            } catch (error) {
+                console.log('Erreur', error)
+            }
         });
         socket.on('notif', async(data)=>{
             console.log(data)
