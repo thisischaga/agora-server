@@ -18,6 +18,8 @@ const Notifications = require('./Models/Notifications');
 const Message = require('./Models/Message');
 const compression = require('compression');
 const { default: rateLimit } = require('express-rate-limit');
+const uploadImage = require('./Congfig/uploadImage');
+
 
 require('dotenv').config();
 connectDB();
@@ -47,7 +49,7 @@ app.use(compression());
 })); */
 
 app.post('/signup', async (req, res) => {
-    const { username, userPassword, userEmail, userPP, userBirthday } = req.body;
+    let { username, userPassword, userEmail, userPP, userBirthday } = req.body;
     const createdAt = new Date();
 
     const emailRegex = /[^\s@]+[^\s@]+\.[^\s@]+$/;
@@ -100,12 +102,18 @@ app.post('/signup', async (req, res) => {
 
         // 7. Hashage et création de l'utilisateur
         const hashedPassword = await bcrypt.hash(userPassword, 10);
+        if (userPP) {
+            const uploadResult = await uploadImage(userPP);
+            userPP = uploadResult.url;
+            publicId = uploadResult.publicId;
+        }
         const newUser = new User({
             username,
             userPassword: hashedPassword,
             userBirthday,
             userEmail,
             userPP,
+            publicId,
             socketId: null,
             messages: [],
             amis: [],
@@ -506,10 +514,16 @@ app.post('/publication', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     const { post } = req.body;
 
-    console.log(post)
     let favoris = [];
 
     const createdAt = new Date().toISOString();
+    let uploadResult;
+    if (post.imageUrl) {
+        console.log('uploading image...')
+        uploadResult = await uploadImage(post.imageUrl);
+        post.imageUrl = uploadResult.url;
+        console.log('image uploaded')
+    }
 
 
     try {
@@ -519,7 +533,7 @@ app.post('/publication', verifyToken, async (req, res) => {
         }
         const { username, userPP } = user;
         const newPost = new Post({
-            username, userPP, post, userId, createdAt, favoris
+            username, userPP, post, userId, createdAt, favoris, publicId: uploadResult.publicId
         });
         await newPost.save();
 

@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema({
         require: true,
         index: true,
     },
+    publicId:{
+        type: String,
+        require: false,
+        index: true,
+    },
     createdAt:{
         type: String,
         require: true,

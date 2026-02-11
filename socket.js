@@ -42,7 +42,6 @@ const initSocket = (server)=>{
         })
     
         socket.on('sendMessage', async(data)=>{
-            console.log(data);
             const participants = data.backendData.participants;
             const receiverId = data.backendData.receiverId;
             const text = data.backendData.text;
@@ -81,6 +80,10 @@ const initSocket = (server)=>{
                 console.log('Erreur', error)
             }
         });
+        socket.on('message', (data)=>{
+            const receiverId = data.receiverId;
+            io.to(receiverId).emit('message', {notif: 'New message'})
+        })
         socket.on('notif', async(data)=>{
             console.log(data)
             try {

@@ -53,6 +53,11 @@ const userSchema = new mongoose.Schema({
         require: true,
         index: true,
     },
+    publicId: {
+        type: String,
+        require: false,
+        index: true,
+    },
     messages: {
         type: [],
         require: true,

@@ -34,6 +34,6 @@ const userSchema = new mongoose.Schema({
         default: Date.now,
         index: true,
     }
-});
+}, {timestamps: true});
 
 module.exports = mongoose.model('Message', userSchema);
