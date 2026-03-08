@@ -22,6 +22,16 @@ const userSchema = new mongoose.Schema({
         require: true,
         index: true,
     },
+    postText:{
+        type: String,
+        require: false,
+        index: true,
+    },
+    postPicture:{
+        type: String,
+        require: false,
+        index: true,
+    },
     publicId:{
         type: String,
         require: false,

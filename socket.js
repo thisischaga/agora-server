@@ -42,11 +42,13 @@ const initSocket = (server)=>{
         })
     
         socket.on('sendMessage', async(data)=>{
+            console.log(data)
+
             const participants = data.backendData.participants;
             const receiverId = data.backendData.receiverId;
             const text = data.backendData.text;
 
-            const backendURL = data.metaData.backendUrl;
+            const backendURL = data.metaData.backendUrl || data.metaData.backendURL;
             const token = data.metaData.token;
 
             //const optimisticMsg = data.optimisticMsg;
@@ -71,7 +73,7 @@ const initSocket = (server)=>{
         });
         socket.on('message:read', async(data)=>{
             try {
-                await axios.put(`${data.API_URL}/messages/read`, {
+                await axios.put(`${data.API_URL || data.backendURL}/messages/read`, {
                     ortherId: data.ortherId
                 }, {
                     headers: { Authorization: `Bearer${data.token}` }

@@ -35,6 +35,9 @@ app.use(cors({
   credentials: true
 }));
 
+
+const isLocal = true;
+
 const server = http.createServer(app);
 initSocket(server);
 const port = 8000;
@@ -102,7 +105,8 @@ app.post('/signup', async (req, res) => {
 
         // 7. Hashage et création de l'utilisateur
         const hashedPassword = await bcrypt.hash(userPassword, 10);
-        if (userPP) {
+
+        if (userPP & !isLocal) {
             const uploadResult = await uploadImage(userPP);
             userPP = uploadResult.url;
             publicId = uploadResult.publicId;
@@ -113,7 +117,7 @@ app.post('/signup', async (req, res) => {
             userBirthday,
             userEmail,
             userPP,
-            publicId,
+            //publicId,
             socketId: null,
             messages: [],
             amis: [],
@@ -173,6 +177,8 @@ app.post('/login', async (req, res) => {
 app.post("/socket/getSocketId", verifyToken, async (req, res) => {
     const { socketId } = req.body;
     const userId = req.user.userId;
+
+    console.log(socketId)
 
     if (!userId || !socketId) {
         return res.status(400).json({ message: "userId ou socketId manquant" });
@@ -373,7 +379,8 @@ app.get('/all-users', verifyToken, async (req, res) => {
 // A user profile
 app.get('/user/:id', verifyToken, async (req, res) => {
 
-    const userId = req.params.id
+    const userId = req.params.id;
+    console.log(userId)
     try {
         const user = await User.findById(userId);
         const userPosts = await Post.find({ userId: userId });
@@ -512,18 +519,18 @@ app.get('/user_data', verifyToken, async (req, res) => {
 
 app.post('/publication', verifyToken, async (req, res) => {
     const userId = req.user.userId;
-    const { post } = req.body;
+    const { post, postText, postPicture } = req.body;
 
     let favoris = [];
 
     const createdAt = new Date().toISOString();
-    let uploadResult;
+    /**let uploadResult;
     if (post.imageUrl) {
         console.log('uploading image...')
         uploadResult = await uploadImage(post.imageUrl);
         post.imageUrl = uploadResult.url;
         console.log('image uploaded')
-    }
+    } */
 
 
     try {
@@ -533,7 +540,7 @@ app.post('/publication', verifyToken, async (req, res) => {
         }
         const { username, userPP } = user;
         const newPost = new Post({
-            username, userPP, post, userId, createdAt, favoris, publicId: uploadResult.publicId
+            username, userPP, post, postText, postPicture, userId, createdAt, favoris, //publicId: uploadResult.publicId
         });
         await newPost.save();
 
@@ -1059,6 +1066,7 @@ app.get("/conversations_list", verifyToken, async (req, res) => {
                     lastMessage: {
                         id: "$lastMessage._id",
                         text: "$lastMessage.message",
+                        sender: "$lastMessage.senderId",
                         createdAt: "$lastMessage.createdAt",
                         unread: {
                             $cond: [
@@ -1076,6 +1084,7 @@ app.get("/conversations_list", verifyToken, async (req, res) => {
                 }
             }
         ]);
+
 
         res.status(200).json(conversations);
 
